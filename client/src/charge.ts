@@ -71,7 +71,7 @@ export class Charge implements ITickable<TickParams>, IRenderable {
         const isCollided = distance.magnitude < totalRadius;
 
         if (isCollided) {
-          const elapsed = (totalRadius - distance.magnitude) / 2 + 1;
+          const elapsed = (totalRadius - distance.magnitude) / 2;
           charge.position = charge.position.vector
             .add(distance.changeMagnitude(elapsed))
             .toPosition();
@@ -82,6 +82,9 @@ export class Charge implements ITickable<TickParams>, IRenderable {
           const normal = distance.versor;
 
           const normalRelativeVelocity = charge.velocity.subtract(this.velocity).dotProduct(normal);
+          if (normalRelativeVelocity === 0) {
+            continue;
+          }
 
           const reducedMass = (charge.mass * this.mass) / (charge.mass + this.mass);
 
@@ -105,22 +108,9 @@ export class Charge implements ITickable<TickParams>, IRenderable {
             normal.multiplyByScalar(scalarImpulse / charge.mass),
           );
 
-          const finalVelocity2 = this.velocity.add(
+          const finalVelocity2 = this.velocity.subtract(
             normal.multiplyByScalar(scalarImpulse / this.mass),
           );
-
-          console.log({
-            mass1: charge.mass,
-            mass2: this.mass,
-            normalRelativeVelocity,
-            reducedMass,
-            systemKineticEnergy,
-            kineticEnergyVariation,
-            restitutionCoefficient,
-            scalarImpulse,
-            finalVelocity1,
-            finalVelocity2,
-          });
 
           charge.velocity = finalVelocity1;
           this.velocity = finalVelocity2;
