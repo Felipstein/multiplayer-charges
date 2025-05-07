@@ -73,6 +73,22 @@ export class World {
     );
   }
 
+  isInsideOfLeftEdge(x: number) {
+    return x >= this.outerLeftX - EDGE_OFFSET && x <= this.innerLeftX;
+  }
+
+  isInsideOfRightEdge(x: number) {
+    return x >= this.innerRightX - EDGE_OFFSET && x <= this.outerRightX;
+  }
+
+  isInsideOfTopEdge(y: number) {
+    return y >= this.outerTopY - EDGE_OFFSET && y <= this.innerTopY;
+  }
+
+  isInsideOfBottomEdge(y: number) {
+    return y >= this.innerBottomY - EDGE_OFFSET && y <= this.outerBottomY;
+  }
+
   isOutsideHorizontally(x: number) {
     return x < this.outerLeftX || x > this.outerRightX;
   }

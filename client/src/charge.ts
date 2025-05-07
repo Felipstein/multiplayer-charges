@@ -1,4 +1,10 @@
-import { ACCELERATION_VISUAL_SCALE, RENDER_VECTORS, VELOCITY_VISUAL_SCALE } from './constants';
+import {
+  ACCELERATION_VISUAL_SCALE,
+  EDGE_OVERLAP_ACCEPTABLE,
+  LOSS_FACTOR_ON_COLLISION,
+  RENDER_VECTORS,
+  VELOCITY_VISUAL_SCALE,
+} from './constants';
 import type { IRenderable } from './interfaces/renderable';
 import type { ITickable } from './interfaces/tickable';
 import { Position } from './position';
@@ -33,6 +39,8 @@ export class Charge implements ITickable<TickParams>, IRenderable {
   frame(deltaTime: number, params: TickParams) {
     const { otherCharges, world } = params;
 
+    this.resolveOverlapWithEdge(world);
+
     if (!this.velocity.isNull) {
       if (this.velocity.isLessThan(0.001)) {
         this.velocity = Vector.zero();
@@ -65,58 +73,97 @@ export class Charge implements ITickable<TickParams>, IRenderable {
           continue;
         }
 
-        const totalRadius = (charge.length + this.length) / 2;
-
-        const distance = charge.position.vector.subtract(this.position.vector);
-        const isCollided = distance.magnitude < totalRadius;
-
-        if (isCollided) {
-          const elapsed = (totalRadius - distance.magnitude) / 2;
-          charge.position = charge.position.vector
-            .add(distance.changeMagnitude(elapsed))
-            .toPosition();
-          this.position = this.position.vector
-            .add(distance.changeMagnitude(elapsed).multiplyByScalar(-1))
-            .toPosition();
-
-          const normal = distance.versor;
-
-          const normalRelativeVelocity = charge.velocity.subtract(this.velocity).dotProduct(normal);
-          if (normalRelativeVelocity === 0) {
-            continue;
-          }
-
-          const reducedMass = (charge.mass * this.mass) / (charge.mass + this.mass);
-
-          const systemKineticEnergy =
-            (charge.mass * charge.velocity.dotProduct(normal) ** 2 +
-              this.mass * this.velocity.dotProduct(normal) ** 2) /
-            2;
-
-          const lossFactor = 0.5; // 50%
-          const kineticEnergyVariation = systemKineticEnergy * (lossFactor - 1);
-
-          const restitutionCoefficient = Math.sqrt(
-            1 - (2 * kineticEnergyVariation) / (reducedMass * normalRelativeVelocity ** 2),
-          );
-
-          const scalarImpulse =
-            (-(1 + restitutionCoefficient) * normalRelativeVelocity) /
-            (1 / charge.mass + 1 / this.mass);
-
-          const finalVelocity1 = charge.velocity.add(
-            normal.multiplyByScalar(scalarImpulse / charge.mass),
-          );
-
-          const finalVelocity2 = this.velocity.subtract(
-            normal.multiplyByScalar(scalarImpulse / this.mass),
-          );
-
-          charge.velocity = finalVelocity1;
-          this.velocity = finalVelocity2;
-        }
+        this.resolveCollision(charge);
       }
     }
+  }
+
+  private resolveOverlapWithEdge(world: World) {
+    const { position, length } = this;
+    const radius = length / 2;
+
+    const leftOverlap = world.innerLeftX - (position.x - radius);
+    if (leftOverlap >= EDGE_OVERLAP_ACCEPTABLE) {
+      position.x += leftOverlap;
+    }
+
+    const rightOverlap = position.x + radius - world.innerRightX;
+    if (rightOverlap >= EDGE_OVERLAP_ACCEPTABLE) {
+      position.x -= rightOverlap;
+    }
+
+    const topOverlap = world.innerTopY - (position.y - radius);
+    if (topOverlap >= EDGE_OVERLAP_ACCEPTABLE) {
+      position.y += topOverlap;
+    }
+
+    const bottomOverlap = position.y + radius - world.innerBottomY;
+    if (bottomOverlap >= EDGE_OVERLAP_ACCEPTABLE) {
+      position.y -= bottomOverlap;
+    }
+  }
+
+  private resolveCollision(charge: Charge) {
+    if (this.id.localeCompare(charge.id) > 0) {
+      return;
+    }
+
+    const totalRadius = (charge.length + this.length) / 2;
+
+    let difference = charge.position.vector.subtract(this.position.vector);
+    const distance = difference.magnitude;
+
+    if (distance >= totalRadius) {
+      return;
+    }
+
+    const overlap = distance - totalRadius;
+    if (overlap < 0) {
+      const overlapDiff = -overlap / 2;
+
+      charge.position = charge.position.vector
+        .add(difference.changeMagnitude(overlapDiff))
+        .toPosition();
+      this.position = this.position.vector
+        .add(difference.changeMagnitude(overlapDiff).multiplyByScalar(-1))
+        .toPosition();
+
+      difference = charge.position.vector.subtract(this.position.vector);
+    }
+
+    const normal = difference.versor;
+
+    const normalRelativeVelocity = charge.velocity.subtract(this.velocity).dotProduct(normal);
+    if (normalRelativeVelocity === 0) {
+      return;
+    }
+
+    const reducedMass = (charge.mass * this.mass) / (charge.mass + this.mass);
+
+    const systemKineticEnergy =
+      (charge.mass * charge.velocity.dotProduct(normal) ** 2 +
+        this.mass * this.velocity.dotProduct(normal) ** 2) /
+      2;
+
+    const kineticEnergyVariation = systemKineticEnergy * (LOSS_FACTOR_ON_COLLISION - 1);
+
+    const restitutionCoefficient = Math.sqrt(
+      1 - (2 * kineticEnergyVariation) / (reducedMass * normalRelativeVelocity ** 2),
+    );
+
+    const scalarImpulse =
+      (-(1 + restitutionCoefficient) * normalRelativeVelocity) / (1 / charge.mass + 1 / this.mass);
+
+    const finalVelocity1 = charge.velocity.add(
+      normal.multiplyByScalar(scalarImpulse / charge.mass),
+    );
+
+    const finalVelocity2 = this.velocity.subtract(
+      normal.multiplyByScalar(scalarImpulse / this.mass),
+    );
+
+    charge.velocity = finalVelocity1;
+    this.velocity = finalVelocity2;
   }
 
   render(ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement) {
