@@ -6,8 +6,8 @@ export class World {
   constructor(
     private readonly x: number,
     private readonly y: number,
-    readonly width: number,
-    readonly height: number,
+    public width: number,
+    public height: number,
     readonly edgeLength: number,
   ) {}
 

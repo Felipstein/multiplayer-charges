@@ -7,15 +7,18 @@ import { World } from './world';
 const canvas = document.getElementById('root') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
+const world = new World(0, 0, canvas.width, canvas.height, 0);
+
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+
+  world.width = canvas.width;
+  world.height = canvas.height;
 }
 
 window.addEventListener('resize', resize);
 resize();
-
-const world = new World(0, 0, canvas.width, canvas.height, 20);
 
 const game = new Game(world);
 
@@ -93,7 +96,7 @@ function renderBackground() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
-  ctx.strokeStyle = 'red';
+  ctx.strokeStyle = '#0d172c';
   ctx.lineWidth = world.edgeLength;
   ctx.strokeRect(world.innerLeftX / 2, world.innerTopY / 2, world.innerRightX, world.innerBottomY);
 
