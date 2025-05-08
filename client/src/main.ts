@@ -48,6 +48,13 @@ for (let i = 0; i < 50; i++) {
   game.addCharge(charge);
 }
 
+game.addCharge(
+  Charge.create(ChargeValue.ELECTRON, 40, new Position(random(world.width), random(world.height))),
+);
+game.addCharge(
+  Charge.create(ChargeValue.PROTON, 40, new Position(random(world.width), random(world.height))),
+);
+
 document.addEventListener('contextmenu', (event) => event.preventDefault());
 
 canvas.addEventListener('mousedown', (event) => {

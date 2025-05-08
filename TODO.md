@@ -1,4 +1,3 @@
-- Criar uma carga super massiva
 - Cursor que atrai
 - Multiplayer
 - HUD

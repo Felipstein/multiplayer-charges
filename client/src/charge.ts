@@ -25,6 +25,24 @@ export enum ChargeValue {
   NEUTRON = 0,
 }
 
+const STYLE: Record<ChargeValue, { stroke: string; glowColor: string; symbol: string }> = {
+  [ChargeValue.ELECTRON]: {
+    stroke: 'rgb(53, 186, 255)',
+    glowColor: 'rgba(0, 192, 255, 0.8)',
+    symbol: '-',
+  },
+  [ChargeValue.PROTON]: {
+    stroke: 'rgb(255, 66, 82)',
+    glowColor: 'rgba(255, 64, 80, 0.8)',
+    symbol: '+',
+  },
+  [ChargeValue.NEUTRON]: {
+    stroke: 'rgb(199, 204, 212)',
+    glowColor: 'rgba(150, 160, 172, 0.8)',
+    symbol: '',
+  },
+};
+
 type TickParams = {
   world: World;
   otherCharges: Charge[];
@@ -44,6 +62,10 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     return (
       MIN_LENGTH + ((this.mass - MIN_MASS) / (MAX_MASS - MIN_MASS)) * (MAX_LENGTH - MIN_LENGTH)
     );
+  }
+
+  get isMassive() {
+    return this.value !== ChargeValue.NEUTRON && this.mass >= 40;
   }
 
   frame(deltaTime: number, params: TickParams) {
@@ -203,35 +225,52 @@ export class Charge implements ITickable<TickParams>, IRenderable {
   }
 
   render(ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement) {
-    const styles: Record<ChargeValue, { stroke: string; glowColor: string; symbol: string }> = {
-      [ChargeValue.ELECTRON]: {
-        stroke: 'rgb(53, 186, 255)',
-        glowColor: 'rgba(0, 192, 255, 0.8)',
-        symbol: '-',
-      },
-      [ChargeValue.PROTON]: {
-        stroke: 'rgb(255, 66, 82)',
-        glowColor: 'rgba(255, 64, 80, 0.8)',
-        symbol: '+',
-      },
-      [ChargeValue.NEUTRON]: {
-        stroke: 'rgb(199, 204, 212)',
-        glowColor: 'rgba(150, 160, 172, 0.8)',
-        symbol: '',
-      },
-    };
-
-    const { stroke, glowColor, symbol } = styles[this.value];
+    const { stroke, glowColor, symbol } = STYLE[this.value];
 
     const radius = this.length / 2;
+
+    if (this.isMassive) {
+      const t = performance.now() * 1e-3;
+      const pulseBlur = 20 + Math.sin(t * Math.PI * 2 * 0.8) * 20;
+
+      ctx.save();
+      ctx.translate(this.position.x, this.position.y);
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 60;
+      ctx.lineWidth = 0; // traço invisível só p/ shadow
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(this.position.x, this.position.y);
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 20;
+      ctx.lineWidth = 0;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(this.position.x, this.position.y);
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = pulseBlur;
+      ctx.lineWidth = 0;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.translate(this.position.x, this.position.y);
 
-    ctx.shadowBlur = 25;
+    ctx.shadowBlur = this.isMassive ? 60 : 25;
     ctx.shadowColor = glowColor;
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = this.isMassive ? 4 : 2;
     ctx.strokeStyle = stroke;
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
