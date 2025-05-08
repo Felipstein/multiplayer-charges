@@ -2,6 +2,8 @@ import { Charge, ChargeValue } from './charge';
 import { Game } from './game';
 import { ipc } from './lib/app-ipc';
 import { Position } from './position';
+import { random } from './utils/random';
+import { Vector } from './vector';
 import { World } from './world';
 
 const canvas = document.getElementById('root') as HTMLCanvasElement;
@@ -21,6 +23,21 @@ window.addEventListener('resize', resize);
 resize();
 
 const game = new Game(world);
+
+for (let i = 0; i < 50; i++) {
+  const charge = Charge.create(
+    random() > 0.5 ? ChargeValue.ELECTRON : ChargeValue.PROTON,
+    new Position(random(world.width), random(world.height)),
+  );
+
+  setTimeout(() => {
+    if (random() > 0.9) {
+      charge.velocity = new Vector(random(-0.5, 0.5), random(-0.5, 0.5));
+    }
+  }, 1000);
+
+  game.addCharge(charge);
+}
 
 document.addEventListener('contextmenu', (event) => event.preventDefault());
 
