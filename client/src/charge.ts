@@ -22,6 +22,7 @@ const MAX_LENGTH = 25;
 export enum ChargeValue {
   ELECTRON = -1.6 * 10 ** -19,
   PROTON = 1.6 * 10 ** -19,
+  NEUTRON = 0,
 }
 
 type TickParams = {
@@ -33,7 +34,7 @@ export class Charge implements ITickable<TickParams>, IRenderable {
   constructor(
     readonly id: string,
     readonly value: ChargeValue,
-    readonly mass: number,
+    public mass: number,
     public position: Position,
     public velocity: Vector,
     public acceleration: Vector,
@@ -184,13 +185,17 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     const difference = this.position.vector.subtract(charge.position.vector);
     const distanceSquared = difference.dotProduct(difference) * 10 ** -6; // simulate in meters
 
+    if (distanceSquared === 0) {
+      return netForce;
+    }
+
     const electricForceModule =
       ((DIELECTRIC_VACUM_CONSTANT * Math.abs(this.value) * Math.abs(charge.value)) /
         distanceSquared) *
       GOD_FORCE;
 
     let sign = this.value * charge.value;
-    sign /= Math.abs(sign);
+    if (sign !== 0) sign /= Math.abs(sign);
 
     const force = difference.changeMagnitude(electricForceModule).multiplyByScalar(sign);
 
@@ -198,7 +203,25 @@ export class Charge implements ITickable<TickParams>, IRenderable {
   }
 
   render(ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement) {
-    const stroke = this.value === ChargeValue.ELECTRON ? 'rgb(53, 186, 255)' : 'rgb(255, 66, 82)';
+    const styles: Record<ChargeValue, { stroke: string; glowColor: string; symbol: string }> = {
+      [ChargeValue.ELECTRON]: {
+        stroke: 'rgb(53, 186, 255)',
+        glowColor: 'rgba(0, 192, 255, 0.8)',
+        symbol: '-',
+      },
+      [ChargeValue.PROTON]: {
+        stroke: 'rgb(255, 66, 82)',
+        glowColor: 'rgba(255, 64, 80, 0.8)',
+        symbol: '+',
+      },
+      [ChargeValue.NEUTRON]: {
+        stroke: 'rgb(199, 204, 212)',
+        glowColor: 'rgba(150, 160, 172, 0.8)',
+        symbol: '',
+      },
+    };
+
+    const { stroke, glowColor, symbol } = styles[this.value];
 
     const radius = this.length / 2;
 
@@ -206,8 +229,7 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     ctx.translate(this.position.x, this.position.y);
 
     ctx.shadowBlur = 25;
-    ctx.shadowColor =
-      this.value === ChargeValue.ELECTRON ? 'rgba(0, 192, 255, 0.8)' : 'rgba(255, 64, 80, 0.8)';
+    ctx.shadowColor = glowColor;
 
     ctx.lineWidth = 2;
     ctx.strokeStyle = stroke;
@@ -220,7 +242,7 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     ctx.font = `600 ${radius * 1.6}px Roboto, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.value === ChargeValue.ELECTRON ? '-' : '+', 0, 1);
+    ctx.fillText(symbol, 0, 1);
 
     if (RENDER_VECTORS) {
       this.drawVector(ctx, this.acceleration, '#f3a83e', ACCELERATION_VISUAL_SCALE);

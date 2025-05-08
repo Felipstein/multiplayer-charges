@@ -4,6 +4,7 @@ import { Game } from './game';
 import { ipc } from './lib/app-ipc';
 import { Position } from './position';
 import { random } from './utils/random';
+import { weighedSample } from './utils/weighted-sample';
 import { Vector } from './vector';
 import { World } from './world';
 
@@ -26,11 +27,15 @@ resize();
 const game = new Game(world);
 
 for (let i = 0; i < 50; i++) {
-  const mass = random(MIN_MASS, MAX_MASS);
+  const value = weighedSample([
+    { item: ChargeValue.ELECTRON, weight: 44 },
+    { item: ChargeValue.PROTON, weight: 44 },
+    { item: ChargeValue.NEUTRON, weight: 12 },
+  ]);
 
   const charge = Charge.create(
-    random() > 0.5 ? ChargeValue.ELECTRON : ChargeValue.PROTON,
-    mass,
+    value,
+    random(MIN_MASS, MAX_MASS),
     new Position(random(world.width), random(world.height)),
   );
 
@@ -46,10 +51,6 @@ for (let i = 0; i < 50; i++) {
 document.addEventListener('contextmenu', (event) => event.preventDefault());
 
 canvas.addEventListener('mousedown', (event) => {
-  if (event.button !== 0 && event.button !== 2) {
-    return;
-  }
-
   const clickedPos = new Position(event.x, event.y);
 
   const charge = game.getChargeFromPoint(clickedPos);
@@ -65,6 +66,11 @@ canvas.addEventListener('mousedown', (event) => {
       charge.velocity = charge.velocity.add(force);
     }
 
+    if (event.button === 1) {
+      const total = event.shiftKey ? 10 : 1;
+      charge.mass += event.ctrlKey ? -total : total;
+    }
+
     if (event.button === 2) {
       game.removeCharge(charge.id);
     }
@@ -72,13 +78,19 @@ canvas.addEventListener('mousedown', (event) => {
     return;
   }
 
-  game.addCharge(
-    Charge.create(
-      event.button === 0 ? ChargeValue.ELECTRON : ChargeValue.PROTON,
-      random(MIN_MASS, MAX_MASS),
-      clickedPos,
-    ),
-  );
+  let value: ChargeValue;
+  switch (event.button) {
+    case 0:
+      value = ChargeValue.ELECTRON;
+      break;
+    case 2:
+      value = ChargeValue.PROTON;
+      break;
+    default:
+      value = ChargeValue.NEUTRON;
+  }
+
+  game.addCharge(Charge.create(value, random(MIN_MASS, MAX_MASS), clickedPos));
 });
 
 ipc.notifyAll('hud-state', { tickRate: 60, particles: game.charges.length }).store();
