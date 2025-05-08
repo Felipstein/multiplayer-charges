@@ -1,7 +1,11 @@
 import {
   ACCELERATION_VISUAL_SCALE,
+  DIELECTRIC_VACUM_CONSTANT,
   EDGE_OVERLAP_ACCEPTABLE,
+  GOD_FORCE,
   LOSS_FACTOR_ON_COLLISION,
+  MAX_MASS,
+  MIN_MASS,
   RENDER_VECTORS,
   VELOCITY_VISUAL_SCALE,
 } from './constants';
@@ -11,6 +15,9 @@ import { Position } from './position';
 import { randomString } from './utils/random-string';
 import { Vector } from './vector';
 import type { World } from './world';
+
+const MIN_LENGTH = 20;
+const MAX_LENGTH = 25;
 
 export enum ChargeValue {
   ELECTRON = -1.6 * 10 ** -19,
@@ -33,7 +40,9 @@ export class Charge implements ITickable<TickParams>, IRenderable {
   ) {}
 
   get length() {
-    return this.mass;
+    return (
+      MIN_LENGTH + ((this.mass - MIN_MASS) / (MAX_MASS - MIN_MASS)) * (MAX_LENGTH - MIN_LENGTH)
+    );
   }
 
   frame(deltaTime: number, params: TickParams) {
@@ -41,11 +50,25 @@ export class Charge implements ITickable<TickParams>, IRenderable {
 
     this.resolveOverlapWithEdge(world);
 
-    if (!this.velocity.isNull) {
-      if (this.velocity.isLessThan(0.001)) {
-        this.velocity = Vector.zero();
-      }
+    let netForce = Vector.zero();
 
+    if (otherCharges.length > 1) {
+      for (const charge of otherCharges) {
+        if (this === charge) {
+          continue;
+        }
+
+        this.resolveCollision(charge);
+
+        netForce = this.resolveCoulombAttraction(netForce, charge);
+      }
+    }
+
+    if (!netForce.isNull) {
+      this.acceleration = netForce.multiplyByScalar(1 / this.mass);
+    }
+
+    if (!this.velocity.isNull || !this.acceleration.isNull) {
       let newVelocity = this.velocity.add(this.acceleration.multiplyByScalar(deltaTime));
 
       const damping = 0.98;
@@ -61,20 +84,11 @@ export class Charge implements ITickable<TickParams>, IRenderable {
 
       const newPosition = this.position.vector
         .add(newVelocity.multiplyByScalar(deltaTime))
-        .add(this.acceleration.multiplyByScalar(deltaTime ** 2 / 2));
+        .add(this.acceleration.multiplyByScalar(deltaTime ** 2 / 2))
+        .toPosition();
 
-      this.position = newPosition.toPosition();
+      this.position = newPosition;
       this.velocity = newVelocity;
-    }
-
-    if (otherCharges.length > 1) {
-      for (const charge of otherCharges) {
-        if (this === charge) {
-          continue;
-        }
-
-        this.resolveCollision(charge);
-      }
     }
   }
 
@@ -166,6 +180,23 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     this.velocity = finalVelocity2;
   }
 
+  private resolveCoulombAttraction(netForce: Vector, charge: Charge) {
+    const difference = this.position.vector.subtract(charge.position.vector);
+    const distanceSquared = difference.dotProduct(difference) * 10 ** -6; // simulate in meters
+
+    const electricForceModule =
+      ((DIELECTRIC_VACUM_CONSTANT * Math.abs(this.value) * Math.abs(charge.value)) /
+        distanceSquared) *
+      GOD_FORCE;
+
+    let sign = this.value * charge.value;
+    sign /= Math.abs(sign);
+
+    const force = difference.changeMagnitude(electricForceModule).multiplyByScalar(sign);
+
+    return netForce.add(force);
+  }
+
   render(ctx: CanvasRenderingContext2D, _canvas: HTMLCanvasElement) {
     const stroke = this.value === ChargeValue.ELECTRON ? 'rgb(53, 186, 255)' : 'rgb(255, 66, 82)';
 
@@ -213,7 +244,7 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     const toY = vector.y * visualScale;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(toX, toY);
@@ -271,7 +302,7 @@ export class Charge implements ITickable<TickParams>, IRenderable {
     return world.isCollidedTopOnEdge(topEdge) || world.isCollidedBottomOnEdge(bottomEdge);
   }
 
-  static create(value: ChargeValue, position: Position) {
-    return new Charge(randomString(6), value, 20, position, Vector.zero(), Vector.zero());
+  static create(value: ChargeValue, mass: number, position: Position) {
+    return new Charge(randomString(6), value, mass, position, Vector.zero(), Vector.zero());
   }
 }

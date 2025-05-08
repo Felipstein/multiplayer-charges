@@ -1,0 +1,5 @@
+- Criar uma carga super massiva
+- Cursor que atrai
+- Multiplayer
+- HUD
+- Criar com movimentos já pré-setados

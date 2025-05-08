@@ -1,4 +1,5 @@
 import { Charge, ChargeValue } from './charge';
+import { MAX_MASS, MIN_MASS } from './constants';
 import { Game } from './game';
 import { ipc } from './lib/app-ipc';
 import { Position } from './position';
@@ -25,8 +26,11 @@ resize();
 const game = new Game(world);
 
 for (let i = 0; i < 50; i++) {
+  const mass = random(MIN_MASS, MAX_MASS);
+
   const charge = Charge.create(
     random() > 0.5 ? ChargeValue.ELECTRON : ChargeValue.PROTON,
+    mass,
     new Position(random(world.width), random(world.height)),
   );
 
@@ -69,7 +73,11 @@ canvas.addEventListener('mousedown', (event) => {
   }
 
   game.addCharge(
-    Charge.create(event.button === 0 ? ChargeValue.ELECTRON : ChargeValue.PROTON, clickedPos),
+    Charge.create(
+      event.button === 0 ? ChargeValue.ELECTRON : ChargeValue.PROTON,
+      random(MIN_MASS, MAX_MASS),
+      clickedPos,
+    ),
   );
 });
 
