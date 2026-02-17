@@ -4,8 +4,8 @@ import { Game } from './game';
 import { ipc } from './lib/app-ipc';
 import { Position } from './position';
 import { random } from './utils/random';
-import { weighedSample } from './utils/weighted-sample';
-import { Vector } from './vector';
+// import { weighedSample } from './utils/weighted-sample';
+// import { Vector } from './vector';
 import { World } from './world';
 
 const canvas = document.getElementById('root') as HTMLCanvasElement;
@@ -26,34 +26,34 @@ resize();
 
 const game = new Game(world);
 
-for (let i = 0; i < 50; i++) {
-  const value = weighedSample([
-    { item: ChargeValue.ELECTRON, weight: 44 },
-    { item: ChargeValue.PROTON, weight: 44 },
-    { item: ChargeValue.NEUTRON, weight: 12 },
-  ]);
+// for (let i = 0; i < 50; i++) {
+//   const value = weighedSample([
+//     { item: ChargeValue.ELECTRON, weight: 44 },
+//     { item: ChargeValue.PROTON, weight: 44 },
+//     { item: ChargeValue.NEUTRON, weight: 12 },
+//   ]);
 
-  const charge = Charge.create(
-    value,
-    random(MIN_MASS, MAX_MASS),
-    new Position(random(world.width), random(world.height)),
-  );
+//   const charge = Charge.create(
+//     value,
+//     random(MIN_MASS, MAX_MASS),
+//     new Position(random(world.width), random(world.height)),
+//   );
 
-  setTimeout(() => {
-    if (random() > 0.9) {
-      charge.velocity = new Vector(random(-0.5, 0.5), random(-0.5, 0.5));
-    }
-  }, 1000);
+//   setTimeout(() => {
+//     if (random() > 0.9) {
+//       charge.velocity = new Vector(random(-0.5, 0.5), random(-0.5, 0.5));
+//     }
+//   }, 1000);
 
-  game.addCharge(charge);
-}
+//   game.addCharge(charge);
+// }
 
-game.addCharge(
-  Charge.create(ChargeValue.ELECTRON, 40, new Position(random(world.width), random(world.height))),
-);
-game.addCharge(
-  Charge.create(ChargeValue.PROTON, 40, new Position(random(world.width), random(world.height))),
-);
+// game.addCharge(
+//   Charge.create(ChargeValue.ELECTRON, 40, new Position(random(world.width), random(world.height))),
+// );
+// game.addCharge(
+//   Charge.create(ChargeValue.PROTON, 40, new Position(random(world.width), random(world.height))),
+// );
 
 document.addEventListener('contextmenu', (event) => event.preventDefault());
 
