@@ -1,7 +1,6 @@
 import { Charge, ChargeValue } from './charge';
 import { MAX_MASS, MIN_MASS } from './constants';
 import { Game } from './game';
-import { ipc } from './lib/app-ipc';
 import { Position } from './position';
 import { random } from './utils/random';
 // import { weighedSample } from './utils/weighted-sample';
@@ -99,8 +98,6 @@ canvas.addEventListener('mousedown', (event) => {
 
   game.addCharge(Charge.create(value, random(MIN_MASS, MAX_MASS), clickedPos));
 });
-
-ipc.notifyAll('hud-state', { tickRate: 60, particles: game.charges.length }).store();
 
 let initialTime = Date.now();
 
